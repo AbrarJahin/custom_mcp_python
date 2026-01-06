@@ -23,7 +23,7 @@ install:
 	@mkdir -p .conda
 	$(CONDA) env create -f $(ENV_FILE) -p $(ENV_PATH) || $(CONDA) env update -f $(ENV_FILE) -p $(ENV_PATH)
 	$(RUN) python -m pip install -e .
-	copy .env.example .env
+	@if not exist .env copy .env.example .env
 
 update:
 	$(CONDA) env update -f $(ENV_FILE) -p $(ENV_PATH)
