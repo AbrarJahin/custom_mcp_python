@@ -1,5 +1,6 @@
 .PHONY: help install update status run dev test-client lint format clean
 
+ENV_FILE := environment.yaml
 ENV_PATH := .conda/env
 CONDA := conda
 RUN := $(CONDA) run -p $(ENV_PATH)
@@ -15,24 +16,23 @@ help:
 	@echo   make test-client  - Run local MCP client against http://localhost:8000/mcp
 	@echo   make lint         - Ruff lint
 	@echo   make format       - Ruff format
-	@echo   make clean        - Remove build artifacts (keeps env)
+	@echo   make clean        - Remove build artifacts
 	@echo ------------------------------------------------------------
 
 install:
 	@mkdir -p .conda
-	$(CONDA) env create -p $(ENV_PATH) -f environment.yaml || $(CONDA) env update -p $(ENV_PATH) -f environment.yaml --prune
-	$(RUN) python -m pip install -U pip
-	$(RUN) pip install -e .
+	$(CONDA) env create -f $(ENV_FILE) -p $(ENV_PATH) || $(CONDA) env update -f $(ENV_FILE) -p $(ENV_PATH)
+	$(RUN) python -m pip install -e .
+	copy .env.example .env
 
 update:
-	$(CONDA) env update -p $(ENV_PATH) -f environment.yaml --prune
-	$(RUN) python -m pip install -U pip
-	$(RUN) pip install -e .
+	$(CONDA) env update -f $(ENV_FILE) -p $(ENV_PATH)
+	$(RUN) python -m pip install -e .
 
 status:
-	$(RUN) python --version
-	$(RUN) pip --version
-	$(RUN) python -c "import mcp, httpx; print('mcp', mcp.__version__); print('httpx', httpx.__version__)"
+	$(RUN) python -V
+	$(RUN) python -m pip -V
+	$(RUN) python -m pip show mcp || true
 
 run:
 	$(RUN) uvicorn mcp_tool_gateway.app:app --host 0.0.0.0 --port 8000

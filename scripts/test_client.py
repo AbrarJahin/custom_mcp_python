@@ -13,7 +13,6 @@ API_KEY = os.getenv("MCP_API_KEY", "dev-key-1")
 
 
 async def main() -> None:
-    # Provide Authorization header to the MCP server
     http_client = httpx.AsyncClient(
         headers={"Authorization": f"Bearer {API_KEY}"},
         timeout=20.0,
@@ -27,14 +26,20 @@ async def main() -> None:
             tools = await session.list_tools()
             print("Tools:", [t.name for t in tools.tools])
 
-            # Call ping
             res = await session.call_tool("system_ping", arguments={})
-            # JSON-response server puts structured content in structuredContent
-            print("Ping structured:", res.structuredContent)
+            print("Ping:", res.structuredContent)
 
-            # Try a search
-            res = await session.call_tool("web_search_ddg_tool", arguments={"query": "MCP streamable HTTP", "max_results": 3})
-            print("Search structured:", res.structuredContent)
+            res = await session.call_tool(
+                "files_read_text_tool",
+                arguments={"path": "hello.txt"},
+            )
+            print("Read file:", res.structuredContent)
+
+            res = await session.call_tool(
+                "web_search_ddg_tool",
+                arguments={"query": "Model Context Protocol streamable HTTP", "max_results": 3},
+            )
+            print("Search:", res.structuredContent)
 
 
 if __name__ == "__main__":
