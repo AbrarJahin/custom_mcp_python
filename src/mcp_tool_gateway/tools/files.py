@@ -17,34 +17,28 @@ def _safe_join(base: Path, user_path: str) -> Path:
 
 
 def read_text(path: str, max_chars: int = 50_000) -> dict:
-    """Read a text file under FILES_BASE_DIR."""
     base = Path(settings.files_base_dir)
     fp = _safe_join(base, path)
 
     if not fp.exists() or not fp.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
+        raise FileNotFoundError(str(fp))
 
-    max_chars = max(100, min(int(max_chars), 200_000))
-    data = fp.read_text(encoding="utf-8", errors="replace")
-    if len(data) > max_chars:
-        data = data[:max_chars]
+    text = fp.read_text(encoding="utf-8", errors="replace")
+    if len(text) > max_chars:
+        text = text[:max_chars]
 
-    return {"path": str(fp), "text": data, "chars": len(data)}
+    return {"path": str(fp), "text": text, "chars": len(text)}
 
 
 def read_pdf_text(path: str, max_pages: int = 10, max_chars: int = 80_000) -> dict:
-    """Extract basic text from a PDF under FILES_BASE_DIR."""
     base = Path(settings.files_base_dir)
     fp = _safe_join(base, path)
 
     if not fp.exists() or not fp.is_file():
-        raise FileNotFoundError(f"File not found: {path}")
-
-    max_pages = max(1, min(int(max_pages), 50))
-    max_chars = max(500, min(int(max_chars), 300_000))
+        raise FileNotFoundError(str(fp))
 
     reader = PdfReader(str(fp))
-    pages = reader.pages[:max_pages]
+    pages = reader.pages[: max(1, int(max_pages))]
 
     chunks: list[str] = []
     for pg in pages:

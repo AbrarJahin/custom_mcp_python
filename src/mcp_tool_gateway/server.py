@@ -1,18 +1,22 @@
-import os
+from __future__ import annotations
+
 from mcp.server.fastmcp import FastMCP
 
-ENABLE_AUTH = os.getenv("MCP_ENABLE_AUTH", "false").lower() in ("1", "true", "yes")
+from .config import get_settings
 
-kwargs = dict(
-    name="mcp-tool-gateway",
-    # other normal FastMCP args...
-)
+settings = get_settings()
 
-if ENABLE_AUTH:
-    # ONLY set these when auth settings are present
-    # kwargs["auth_settings"] = ...
-    kwargs["auth_server_provider"] = ...
-    # OR kwargs["token_verifier"] = ...
-    # (whatever you were setting before)
+# Create MCP server (no built-in auth wiring; we enforce auth in FastAPI middleware when enabled)
+mcp = FastMCP(settings.mcp_name)
 
-mcp = FastMCP(**kwargs)
+
+@mcp.tool()
+def ping() -> str:
+    """Simple connectivity test."""
+    return "pong"
+
+
+@mcp.tool()
+def add(a: float, b: float) -> float:
+    """Return a + b"""
+    return a + b
