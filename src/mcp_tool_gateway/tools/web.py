@@ -11,48 +11,25 @@ from ..config import settings
 _domain_re = re.compile(r"^[a-z0-9.-]+$", re.I)
 
 
+def _is_subdomain(host: str, base: str) -> bool:
+    host = host.lower().strip(".")
+    base = base.lower().strip(".")
+    return host == base or host.endswith("." + base)
+
+
 def _domain_allowed(host: str) -> bool:
     host = host.lower().strip(".")
     if not host or not _domain_re.match(host):
         return False
+
     allowed = settings.allowed_domains()
+    # If user configured "*" or left it empty, treat as allow-all (optional).
     if not allowed:
-        return False
-    return any(host == d or host.endswith("." + d) for d in allowed)
+        return True
+    if "*" in allowed:
+        return True
 
-
-def _is_allowed_url(url: str) -> bool:
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        return False
-    if not parsed.hostname:
-        return False
-    return _domain_allowed(parsed.hostname)
-
-
-async def web_fetch(url: str) -> dict:
-    """Fetch a URL (allowlist + size cap + timeout)."""
-    if not _is_allowed_url(url):
-        raise ValueError(f"URL not allowed by WEB_ALLOWED_DOMAINS: {url}")
-
-    timeout = settings.web_fetch_timeout_s
-    max_bytes = settings.web_max_bytes
-
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        r = await client.get(url, headers={"User-Agent": "mcp-tool-gateway/0.1"})
-        r.raise_for_status()
-
-        # cap bytes
-        content = r.content[:max_bytes]
-        text = content.decode(r.encoding or "utf-8", errors="replace")
-
-    return {
-        "url": str(r.url),
-        "status_code": r.status_code,
-        "bytes": len(content),
-        "text": text,
-        "content_type": r.headers.get("content-type", ""),
-    }
+    return any(_is_subdomain(host, d) for d in allowed)
 
 
 async def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
@@ -73,3 +50,43 @@ async def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
             }
         )
     return out
+
+
+async def web_fetch(url: str, max_chars: int = 50_000) -> dict:
+    """Fetch a URL (allowlisted domains). Returns text truncated to max_chars."""
+    max_chars = max(500, min(int(max_chars), 200_000))
+
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Only http/https URLs are allowed")
+    if not _domain_allowed(host):
+        raise PermissionError(f"Domain not allowed: {host}")
+
+    timeout = httpx.Timeout(settings.web_fetch_timeout_s)
+    headers = {"User-Agent": "mcp-tool-gateway/0.1"}
+
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+
+        content = r.content
+        if len(content) > settings.web_max_bytes:
+            content = content[: settings.web_max_bytes]
+
+        # Best-effort decode
+        try:
+            text = content.decode(r.encoding or "utf-8", errors="replace")
+        except Exception:
+            text = content.decode("utf-8", errors="replace")
+
+        if len(text) > max_chars:
+            text = text[:max_chars]
+
+        return {
+            "url": str(r.url),
+            "status_code": r.status_code,
+            "content_type": r.headers.get("content-type", ""),
+            "text": text,
+            "bytes_read": len(content),
+        }
