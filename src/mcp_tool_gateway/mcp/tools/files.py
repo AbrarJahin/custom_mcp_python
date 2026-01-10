@@ -51,3 +51,27 @@ def read_pdf_text(path: str, max_pages: int = 10, max_chars: int = 80_000) -> di
         text = text[:max_chars]
 
     return {"path": str(fp), "pages_read": len(pages), "text": text}
+
+
+def register(mcp) -> None:
+    """Register file/PDF tools on the given FastMCP instance."""
+
+    @mcp.tool(name="files.read_text")
+    def tool_files_read_text(path: str, max_chars: int | None = None) -> dict:
+        """Read a text file under FILES_BASE_DIR (path traversal protected)."""
+        # Reuse existing helper for path safety
+        base = Path(settings.files_base_dir)
+        fp = _safe_join(base, path)
+        if not fp.exists() or not fp.is_file():
+            raise FileNotFoundError(f"File not found: {path}")
+        text = fp.read_text(encoding="utf-8", errors="replace")
+        limit = int(max_chars or settings.files_max_chars)
+        if len(text) > limit:
+            text = text[:limit]
+        return {"path": str(fp), "text": text}
+
+    @mcp.tool(name="files.read_pdf")
+    def tool_files_read_pdf(path: str, max_pages: int | None = None, max_chars: int | None = None) -> dict:
+        """Extract text from a PDF under FILES_BASE_DIR (path traversal protected)."""
+        # Existing read_pdf uses env defaults; keep behavior but allow overrides.
+        return read_pdf(path=path, max_pages=int(max_pages or settings.files_max_pages), max_chars=int(max_chars or settings.files_max_chars))

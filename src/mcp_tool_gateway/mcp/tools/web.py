@@ -73,3 +73,20 @@ async def web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
             }
         )
     return out
+
+
+def register(mcp) -> None:
+    """Register web tools on the given FastMCP instance."""
+
+    @mcp.tool(name="web.search_ddg")
+    async def tool_web_search_ddg(query: str, max_results: int = 5) -> list[dict]:
+        """Search DuckDuckGo (async) and return a ranked list of results.
+
+        Uses duckduckgo-async-search internally.
+        """
+        return await web_search_ddg(query=query, max_results=max_results)
+
+    @mcp.tool(name="web.fetch")
+    async def tool_web_fetch(url: str) -> dict:
+        """Fetch a URL with allowlist + size cap + timeout."""
+        return await web_fetch(url=url)
