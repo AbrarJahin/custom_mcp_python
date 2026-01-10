@@ -7,7 +7,7 @@ name = "mcp-tool-gateway"
 version = "0.1.0"
 description = "FastAPI gateway that exposes an MCP (FastMCP) server with optional JWT auth."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "mcp>=1.7.1",
   "fastapi>=0.110",

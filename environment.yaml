@@ -5,15 +5,6 @@ dependencies:
   - python=3.11
   - pip
   - pip:
-      # MCP official Python SDK (FastMCP included)
-      - "mcp[cli]>=1.7.1"
-      - fastapi>=0.110
-      - "uvicorn>=0.30.0"
-      - "starlette>=0.37.2"
-      - "httpx>=0.27.0"
-      - "pydantic>=2.7.0"
-      - "pydantic-settings>=2.3.0"
-      - "python-dotenv>=1.0.1"
-      - "duckduckgo-async-search>=0.2.0"
-      - "pypdf>=5.0.0"
-      - "rich>=13.7.0"
+      # This is the only packages needed by the CLI, app packages are added in .toml file
+      - -e ".[dev,cli,docs]"
+      - "ruff>=0.6.0"
