@@ -1,18 +1,34 @@
 .PHONY: help install update status run dev test-client lint format clean
 
 # -----------------------------
-# Config (versions come from these files)
+# Config
 # -----------------------------
 ENV_FILE := environment.yaml
 ENV_PATH := .conda/env
 CONDA ?= conda
 
-# Quote ENV_PATH to avoid issues on Windows paths/spaces
-RUN := $(CONDA) run -p "$(ENV_PATH)"
+# Run commands inside the conda env (works on Windows)
+# IMPORTANT: --no-capture-output is required so uvicorn logs show up on Windows.
+RUN := $(CONDA) run --no-capture-output -p "$(ENV_PATH)"
 
-# Use system Python for small cross-platform helper commands (copy/delete).
-# This does NOT pin versions; it just runs tiny utilities.
-PY ?= python
+# -----------------------------
+# Load values from .env (cross-platform)
+# - Uses python-dotenv inside the conda env (already in your env)
+# - CLI overrides still win: make dev HOST=0.0.0.0 PORT=9000
+# -----------------------------
+ENV_DOTFILE ?= .env
+
+# Usage: $(call env,KEY,default)
+env = $(shell $(RUN) python -c "import os; from dotenv import dotenv_values; v=dotenv_values('$(ENV_DOTFILE)'); print(os.getenv('$(1)', v.get('$(1)', '$(2)')))" )
+
+APP_NAME ?= $(call env,APP_NAME,mcp-tool-gateway)
+HOST ?= $(call env,HOST,127.0.0.1)
+PORT ?= $(call env,PORT,8000)
+MCP_MOUNT_PATH ?= $(call env,MCP_MOUNT_PATH,/mcp)
+PUBLIC_BASE_URL ?= $(call env,PUBLIC_BASE_URL,http://$(HOST):$(PORT))
+
+MCP_BASE_URL := http://$(HOST):$(PORT)
+MCP_SERVER_URL := $(MCP_BASE_URL)$(MCP_MOUNT_PATH)
 
 help:
 	@echo ------------------------------------------------------------
@@ -20,9 +36,9 @@ help:
 	@echo   make install      - Create/update conda env + pip install -e .
 	@echo   make update       - Update env (prune) + reinstall editable package
 	@echo   make status       - Show python/pip versions inside env
-	@echo   make run          - Run MCP server (uvicorn)
-	@echo   make dev          - Run MCP server with auto-reload
-	@echo   make test-client  - Run local MCP client against http://localhost:8000/mcp
+	@echo   make run          - Run MCP server (uvicorn) on $(HOST):$(PORT)
+	@echo   make dev          - Run MCP server with auto-reload on $(HOST):$(PORT)
+	@echo   make test-client  - Run local MCP client against $(MCP_SERVER_URL)
 	@echo   make lint         - Ruff lint (expects ruff in environment.yaml)
 	@echo   make format       - Ruff format (expects ruff in environment.yaml)
 	@echo   make clean        - Remove build/test caches (cross-platform)
@@ -55,17 +71,16 @@ status:
 # Run server
 # -----------------------------
 run:
-	@$(RUN) uvicorn mcp_tool_gateway.app:app --host 0.0.0.0 --port 8000
+	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT)
 
 dev:
-	@$(RUN) uvicorn mcp_tool_gateway.app:app --host 0.0.0.0 --port 8000 --reload
+	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --reload --log-level debug
 
 test-client:
 	@$(RUN) python scripts/test_client.py
 
 # -----------------------------
 # Code quality (managed by env file, not Makefile)
-# NOTE: Add ruff to environment.yaml under pip: if you want these targets to work.
 # -----------------------------
 lint:
 	@$(RUN) python -c "import importlib.util, sys; \
@@ -81,7 +96,7 @@ format:
 # Cleanup (cross-platform)
 # -----------------------------
 clean:
-	@$(PY) -c "import shutil, pathlib; \
+	@$(RUN) python -c "import shutil, pathlib; \
 		paths=['dist','build','.pytest_cache','.ruff_cache']; \
 		[shutil.rmtree(p, ignore_errors=True) for p in paths]; \
 		[shutil.rmtree(str(p), ignore_errors=True) for p in pathlib.Path('.').glob('*.egg-info')]"
