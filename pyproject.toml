@@ -18,6 +18,7 @@ dependencies = [
   "pydantic-settings>=2.3.0",
   "python-dotenv>=1.0.1",
   "PyJWT[crypto]>=2.10.1",
+  "duckduckgo-async-search>=0.1.0",
 ]
 
 [tool.setuptools]
