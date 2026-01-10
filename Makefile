@@ -102,5 +102,5 @@ clean:
 		[shutil.rmtree(str(p), ignore_errors=True) for p in pathlib.Path('.').glob('*.egg-info')]"
 
 test:
-	@echo Running all tests...
+	@echo Please ensure MCP server is running. Running all integration tests...
 	@$(RUN) pytest -q
