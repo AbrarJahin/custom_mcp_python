@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ._base import BaseTool, ToolSpec, tool_decorator
+from mcp_tool_gateway.tools._base import BaseTool, ToolSpec, tool_decorator
 
 
 class AddTool(BaseTool):

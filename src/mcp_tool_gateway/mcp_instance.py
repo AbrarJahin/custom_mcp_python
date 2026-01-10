@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from .config import get_settings
+from mcp_tool_gateway.config import get_settings
 
 settings = get_settings()
 

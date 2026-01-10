@@ -5,8 +5,8 @@ from typing import Optional
 from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..config import get_settings
-from ..security import api_key_is_allowed, issue_jwt
+from mcp_tool_gateway.config import get_settings
+from mcp_tool_gateway.security import api_key_is_allowed, issue_jwt
 
 
 router = APIRouter(tags=["Auth"])

@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Type
 
-from ._base import BaseTool, ToolSpec
-from .add import AddTool
-from .ping import PingTool
-from .web_search import WebSearchTool
+from mcp_tool_gateway.tools._base import BaseTool, ToolSpec
+from mcp_tool_gateway.tools.add import AddTool
+from mcp_tool_gateway.tools.ping import PingTool
+from mcp_tool_gateway.tools.web_search import WebSearchTool
 
 # Single source of truth for what tools exist in this server.
 _TOOL_CLASSES: tuple[Type[BaseTool], ...] = (
