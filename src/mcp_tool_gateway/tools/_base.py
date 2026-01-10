@@ -183,9 +183,10 @@ async def _coerce_to_async_stream(obj: Any) -> AsyncIterator[Any]:
             yield item
         return
 
-    # Sync iterator (generator)
+    # Sync iterable (generator, list, tuple, etc.)
+    # Avoid treating strings/bytes/dicts as streams.
     if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, dict)):
-        it = cast(Iterator[Any], obj)
+        it = iter(obj)  # ✅ convert Iterable -> Iterator
         async for item in _iterate_sync_iterator_in_thread(it):
             yield item
         return
