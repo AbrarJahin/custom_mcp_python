@@ -6,7 +6,9 @@ from fastapi.responses import JSONResponse
 from .config import get_settings
 from .security import require_scopes, verify_jwt_from_header
 from .server import mcp
+
 from .routes.auth import router as auth_router
+from .routes.tools import router as tools_router
 
 
 def create_app() -> FastAPI:
@@ -25,6 +27,7 @@ def create_app() -> FastAPI:
 
     # Register auth endpoint (it will error if auth is disabled, which is fine)
     app.include_router(auth_router)
+    app.include_router(tools_router)
 
     # Middleware-like gate for MCP routes when auth is enabled.
     @app.middleware("http")

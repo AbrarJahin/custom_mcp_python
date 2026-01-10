@@ -1,22 +1,16 @@
 from __future__ import annotations
 
-from mcp.server.fastmcp import FastMCP
+"""MCP server export.
 
-from .config import get_settings
+This module exposes the FastMCP server instance as `mcp`.
+Tool registration occurs when tool modules are imported.
+"""
 
-settings = get_settings()
+from .mcp_instance import mcp
 
-# Create MCP server (no built-in auth wiring; we enforce auth in FastAPI middleware when enabled)
-mcp = FastMCP(settings.mcp_name)
+# Import tool modules so BaseTool.register() runs at import time.
+from .tools import ping as _ping  # noqa: F401
+from .tools import add as _add  # noqa: F401
+from .tools import web_search as _web_search  # noqa: F401
 
-
-@mcp.tool()
-def ping() -> str:
-    """Simple connectivity test."""
-    return "pong"
-
-
-@mcp.tool()
-def add(a: float, b: float) -> float:
-    """Return a + b"""
-    return a + b
+__all__ = ["mcp"]
