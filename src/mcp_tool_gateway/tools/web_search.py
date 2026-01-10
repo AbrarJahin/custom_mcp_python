@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .base import BaseTool, ToolSpec, tool_decorator
-from .registry import register_tool
+from ._base import BaseTool, ToolSpec, tool_decorator
 from ..services.web_service import web_search_ddg
 
 
@@ -28,8 +27,3 @@ class WebSearchTool(BaseTool):
                 List of dict results with: rank, title, url, snippet.
             """
             return await web_search_ddg(query=query, max_results=max_results)
-
-
-_tool = WebSearchTool()
-register_tool(_tool)
-_tool.register()

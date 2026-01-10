@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from .base import BaseTool, ToolSpec, tool_decorator
-from .registry import register_tool
+from ._base import BaseTool, ToolSpec, tool_decorator
 
 
 class PingTool(BaseTool):
@@ -17,8 +16,3 @@ class PingTool(BaseTool):
         def ping() -> str:
             """Simple connectivity test."""
             return "pong"
-
-
-_tool = PingTool()
-register_tool(_tool)
-_tool.register()
