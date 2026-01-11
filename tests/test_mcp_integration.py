@@ -27,7 +27,7 @@ from dotenv import dotenv_values
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
-log = logging.getLogger("test_mcp_integration")
+_logger = logging.getLogger("test_mcp_integration")
 
 # ---------------------------
 # Config loading (env -> .env -> .env.example)
@@ -63,7 +63,7 @@ BASE_URL = BASE_URL.rstrip("/")
 
 MCP_SSE_URL = f"{BASE_URL}{MCP_MOUNT_PATH}/sse"
 
-log.debug('Resolved: HOST=%s PORT=%s BASE_URL=%s MCP_MOUNT_PATH=%s MCP_SSE_URL=%s', HOST, PORT, BASE_URL, MCP_MOUNT_PATH, MCP_SSE_URL)
+_logger.debug('Resolved: HOST=%s PORT=%s BASE_URL=%s MCP_MOUNT_PATH=%s MCP_SSE_URL=%s', HOST, PORT, BASE_URL, MCP_MOUNT_PATH, MCP_SSE_URL)
 
 # Optional auth
 MCP_API_KEYS = _load_value("MCP_API_KEYS", "dev-key-1")
@@ -72,7 +72,7 @@ MCP_API_KEYS = _load_value("MCP_API_KEYS", "dev-key-1")
 HTTP_TIMEOUT_S = float(_load_value("TEST_HTTP_TIMEOUT_S", "10"))
 MCP_STEP_TIMEOUT_S = float(_load_value("TEST_MCP_STEP_TIMEOUT_S", "15"))
 
-log = logging.getLogger("tests.mcp")
+_logger = logging.getLogger("tests.mcp")
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -88,8 +88,8 @@ def _first_api_key() -> str:
 async def _http_get_json(path: str) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
         r = await client.get(f"{BASE_URL}{path}")
-        log.debug('HTTP GET %s -> %s', path, r.status_code)
-        log.debug('HTTP GET %s body(head)=%r', path, r.text[:800])
+        _logger.debug('HTTP GET %s -> %s', path, r.status_code)
+        _logger.debug('HTTP GET %s body(head)=%r', path, r.text[:800])
         r.raise_for_status()
         return r.json()
 
@@ -148,9 +148,9 @@ async def _wait(coro, *, timeout_s: float, label: str):
         # Recheck health to distinguish server-down vs handshake-stuck.
         try:
             h = await _http_get_json('/health')
-            log.debug('Timeout while %s; /health still OK: %s', label, h)
+            _logger.debug('Timeout while %s; /health still OK: %s', label, h)
         except Exception as _:
-            log.debug('Timeout while %s; /health recheck failed', label)
+            _logger.debug('Timeout while %s; /health recheck failed', label)
         raise AssertionError(f"Timed out after {timeout_s:.0f}s while waiting for: {label}") from e
 
 
@@ -163,13 +163,13 @@ async def _sniff_sse(url: str, headers: dict[str, str] | None) -> None:
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
             async with client.stream("GET", url, headers=headers) as r:
-                log.debug("SSE SNIFF status=%s headers(content-type)=%s", r.status_code, r.headers.get("content-type"))
+                _logger.debug("SSE SNIFF status=%s headers(content-type)=%s", r.status_code, r.headers.get("content-type"))
                 async for line in r.aiter_lines():
                     if line:
-                        log.debug("SSE SNIFF first line=%r", line[:300])
+                        _logger.debug("SSE SNIFF first line=%r", line[:300])
                         break
     except Exception as e:
-        log.debug("SSE SNIFF failed: %s", repr(e))
+        _logger.debug("SSE SNIFF failed: %s", repr(e))
 async def _open_mcp_session() -> tuple[ClientSession, Any]:
     """
     Opens SSE connection + initializes MCP session.
