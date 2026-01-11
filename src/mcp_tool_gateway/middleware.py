@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+import logging
+
 from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
+
+logger = logging.getLogger("mcp_tool_gateway.middleware")
 
 
 class McpAuthGateMiddleware:
@@ -29,9 +33,17 @@ class McpAuthGateMiddleware:
             return
 
         path = scope.get("path", "") or ""
+        if scope.get("type") == "http":
+            logger.debug(
+                "McpAuthGateMiddleware: path=%s auth_enabled=%s mount=%s",
+                path,
+                self.settings.mcp_enable_auth,
+                self.settings.mcp_mount_path,
+            )
 
         # Enforce auth only if enabled AND request is under MCP mount path
         if self.settings.mcp_enable_auth and path.startswith(self.settings.mcp_mount_path):
+            logger.debug("Auth enforced for path=%s", path)
             # ASGI headers are List[Tuple[bytes, bytes]]
             headers = dict(scope.get("headers") or [])
             auth_bytes = headers.get(b"authorization", b"")

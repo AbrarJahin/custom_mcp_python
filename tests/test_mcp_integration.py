@@ -14,6 +14,7 @@ This file is designed to NEVER hang indefinitely:
 from __future__ import annotations
 
 import asyncio
+import logging
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,7 @@ from dotenv import dotenv_values
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+log = logging.getLogger("test_mcp_integration")
 
 # ---------------------------
 # Config loading (env -> .env -> .env.example)
@@ -61,12 +63,17 @@ BASE_URL = BASE_URL.rstrip("/")
 
 MCP_SSE_URL = f"{BASE_URL}{MCP_MOUNT_PATH}/sse"
 
+log.debug('Resolved: HOST=%s PORT=%s BASE_URL=%s MCP_MOUNT_PATH=%s MCP_SSE_URL=%s', HOST, PORT, BASE_URL, MCP_MOUNT_PATH, MCP_SSE_URL)
+
 # Optional auth
 MCP_API_KEYS = _load_value("MCP_API_KEYS", "dev-key-1")
 
 # Timeouts to prevent hanging
 HTTP_TIMEOUT_S = float(_load_value("TEST_HTTP_TIMEOUT_S", "10"))
 MCP_STEP_TIMEOUT_S = float(_load_value("TEST_MCP_STEP_TIMEOUT_S", "15"))
+
+log = logging.getLogger("tests.mcp")
+logging.basicConfig(level=logging.DEBUG)
 
 
 # ---------------------------
@@ -81,6 +88,8 @@ def _first_api_key() -> str:
 async def _http_get_json(path: str) -> dict[str, Any]:
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
         r = await client.get(f"{BASE_URL}{path}")
+        log.debug('HTTP GET %s -> %s', path, r.status_code)
+        log.debug('HTTP GET %s body(head)=%r', path, r.text[:800])
         r.raise_for_status()
         return r.json()
 
@@ -136,9 +145,31 @@ async def _wait(coro, *, timeout_s: float, label: str):
     try:
         return await asyncio.wait_for(coro, timeout=timeout_s)
     except asyncio.TimeoutError as e:
+        # Recheck health to distinguish server-down vs handshake-stuck.
+        try:
+            h = await _http_get_json('/health')
+            log.debug('Timeout while %s; /health still OK: %s', label, h)
+        except Exception as _:
+            log.debug('Timeout while %s; /health recheck failed', label)
         raise AssertionError(f"Timed out after {timeout_s:.0f}s while waiting for: {label}") from e
 
 
+
+async def _sniff_sse(url: str, headers: dict[str, str] | None) -> None:
+    """
+    Best-effort: open SSE and read the first line (if any).
+    Helps diagnose buffering / handshake issues.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT_S) as client:
+            async with client.stream("GET", url, headers=headers) as r:
+                log.debug("SSE SNIFF status=%s headers(content-type)=%s", r.status_code, r.headers.get("content-type"))
+                async for line in r.aiter_lines():
+                    if line:
+                        log.debug("SSE SNIFF first line=%r", line[:300])
+                        break
+    except Exception as e:
+        log.debug("SSE SNIFF failed: %s", repr(e))
 async def _open_mcp_session() -> tuple[ClientSession, Any]:
     """
     Opens SSE connection + initializes MCP session.
@@ -147,6 +178,9 @@ async def _open_mcp_session() -> tuple[ClientSession, Any]:
     health = await _http_get_json("/health")
     token = await _maybe_get_bearer_token(health)
     headers = {"Authorization": f"Bearer {token}"} if token else None
+
+    # Optional: sniff SSE to ensure server is emitting
+    await _sniff_sse(MCP_SSE_URL, headers)
 
     # Open SSE stream
     sse_ctx = sse_client(MCP_SSE_URL, headers=headers)

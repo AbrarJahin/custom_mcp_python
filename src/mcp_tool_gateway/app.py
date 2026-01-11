@@ -1,5 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
+import logging
 
 import httpx
 
@@ -10,6 +12,7 @@ from starlette.responses import Response
 
 from mcp_tool_gateway.config import get_settings
 from mcp_tool_gateway.server import mcp
+from mcp_tool_gateway.lifespan import startup_subapp, shutdown_subapp
 
 from mcp_tool_gateway.routes.auth import router as auth_router
 from mcp_tool_gateway.routes.tools import router as tools_router
@@ -17,14 +20,39 @@ from mcp_tool_gateway.routes.tools import router as tools_router
 from mcp_tool_gateway.middleware import McpAuthGateMiddleware
 from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
 
+logger = logging.getLogger("mcp_tool_gateway.app")
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(title=settings.app_name)
+    # Build MCP SSE sub-application once per process.
+    # NOTE: Mounted apps may not have their lifespan invoked automatically by the parent.
+    mcp_app = mcp.sse_app()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        logger.debug(
+            "Gateway lifespan start: app_name=%s host=%s port=%s mcp_mount_path=%s auth_enabled=%s",
+            settings.app_name,
+            settings.host,
+            settings.port,
+            settings.mcp_mount_path,
+            settings.mcp_enable_auth,
+        )
+        # Forward startup to mounted MCP app (required for some FastMCP versions).
+        await startup_subapp(mcp_app, name="mcp_sse_app")
+        try:
+            yield
+        finally:
+            await shutdown_subapp(mcp_app, name="mcp_sse_app")
+            logger.debug("Gateway lifespan stop")
+
+    app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
     @app.get("/health")
     def health():
+        logger.debug("/health called")
         return {
             "ok": True,
             "app_name": settings.app_name,
@@ -50,10 +78,12 @@ def create_app() -> FastAPI:
     # mount path via MCP_MOUNT_PATH, but for compatibility we also expose the same MCP app
     # under "/mcp". This does NOT remove or change existing behavior; it only adds an
     # additional stable alias.
-    mcp_app = mcp.sse_app()
+    # MCP SSE app is created above as mcp_app
 
     # Primary mount (configurable)
     app.mount(settings.mcp_mount_path, mcp_app)
+
+    logger.debug('Mounted MCP app at %s (and alias /mcp if needed)', settings.mcp_mount_path)
 
     # Compatibility mount (stable default)
     primary = settings.mcp_mount_path.rstrip("/") or "/"
