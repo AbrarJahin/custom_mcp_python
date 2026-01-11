@@ -10,7 +10,6 @@ from typing import (
     Callable,
     Dict,
     Iterator,
-    Optional,
     TypeVar,
     cast,
 )
