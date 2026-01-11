@@ -3,6 +3,7 @@
         "**/.vscode": true,
         "**/.conda": true,
         "**/.env*": true,
-        "**/.gitignore": true
+        "**/.gitignore": true,
+        "**/.pytest_cache": true
     }
 }
