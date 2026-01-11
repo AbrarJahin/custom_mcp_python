@@ -7,6 +7,10 @@ ENV_FILE := environment.yaml
 ENV_PATH := .conda/env
 CONDA ?= conda
 
+# --- Logging for tests ---
+LOG_DIR  := logs
+TEST_LOG := $(LOG_DIR)/test.log
+
 # Run commands inside the conda env (works on Windows)
 # IMPORTANT: --no-capture-output is required so uvicorn logs show up on Windows.
 RUN := $(CONDA) run --no-capture-output -p "$(ENV_PATH)"
@@ -42,6 +46,7 @@ help:
 	@echo   make lint         - Ruff lint (expects ruff in environment.yaml)
 	@echo   make format       - Ruff format (expects ruff in environment.yaml)
 	@echo   make clean        - Remove build/test caches (cross-platform)
+	@echo   make test         - Run all tests (ensure server is running first with `make run`)
 	@echo ------------------------------------------------------------
 
 # -----------------------------
@@ -71,7 +76,7 @@ status:
 # Run server
 # -----------------------------
 run:
-	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT)
+	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --log-level debug
 
 dev:
 	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --reload --log-level debug
@@ -102,5 +107,7 @@ clean:
 		[shutil.rmtree(str(p), ignore_errors=True) for p in pathlib.Path('.').glob('*.egg-info')]"
 
 test:
+	@if not exist "$(LOG_DIR)" mkdir "$(LOG_DIR)"
 	@echo Please ensure MCP server is running. Running all integration tests...
-	@$(RUN) pytest -q
+	@echo Running tests... (live output + saving to $(TEST_LOG))
+	@powershell -NoProfile -Command "$(RUN) python -u -m pytest -q 2>&1 | Tee-Object -FilePath '$(TEST_LOG)'; exit $$LASTEXITCODE"
