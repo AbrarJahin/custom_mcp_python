@@ -71,26 +71,10 @@ def create_app() -> FastAPI:
     app.add_middleware(McpAuthGateMiddleware, settings=settings)
 
     # Mount MCP transport
-    app.mount(settings.MCP_MOUNT_PATH, mcp.sse_app())
+    app.mount(settings.mcp_mount_path, mcp.sse_app()))
 
     # Compatibility alias for /mcp if user changes mount path
-    if settings.mcp_mount_path != "/mcp":
-        
-
-    # Compatibility: forward /messages to /mcp/messages (some clients assume root)
-    @app.api_route("/messages", methods=["POST"])
-    async def messages_alias(request: Request):
-        upstream_url = f"{settings.public_base_url}{settings.mcp_mount_path}/messages"
-        async with httpx.AsyncClient(timeout=30) as client:
-            upstream = await client.request(
-                request.method,
-                upstream_url,
-                params=dict(request.query_params),
-                content=await request.body(),
-                headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
-            )
-
-        hop_by_hop = {
+            hop_by_hop = {
             "connection",
             "keep-alive",
             "proxy-authenticate",
