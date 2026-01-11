@@ -6,7 +6,7 @@ from typing import List, Optional
 
 import jwt  # PyJWT
 
-from .config import get_settings
+from mcp_tool_gateway.config import get_settings
 
 # MCP auth types (provided by the `mcp` package)
 from mcp.server.auth.provider import AccessToken, TokenVerifier

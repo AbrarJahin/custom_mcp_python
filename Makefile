@@ -1,4 +1,4 @@
-.PHONY: help install update status run dev test-client lint format clean
+.PHONY: help install update status run dev test-client lint format clean test
 
 # -----------------------------
 # Config
@@ -100,3 +100,7 @@ clean:
 		paths=['dist','build','.pytest_cache','.ruff_cache']; \
 		[shutil.rmtree(p, ignore_errors=True) for p in paths]; \
 		[shutil.rmtree(str(p), ignore_errors=True) for p in pathlib.Path('.').glob('*.egg-info')]"
+
+test:
+	@echo Please ensure MCP server is running. Running all integration tests...
+	@$(RUN) pytest -q

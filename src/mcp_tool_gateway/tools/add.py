@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from .base import BaseTool, ToolSpec, tool_decorator
-from .registry import register_tool
+from mcp_tool_gateway.tools._base import BaseTool, ToolSpec, tool_decorator
 
 
 class AddTool(BaseTool):
@@ -15,10 +14,5 @@ class AddTool(BaseTool):
     def register(self) -> None:
         @tool_decorator(name=self.spec.name, description=self.spec.description)
         def add(a: float, b: float) -> float:
-            """Return a + b"""
+            """Return a + b."""
             return a + b
-
-
-_tool = AddTool()
-register_tool(_tool)
-_tool.register()

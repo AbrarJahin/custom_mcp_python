@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from ..tools.registry import list_tool_specs, get_tool
+from mcp_tool_gateway.tools import list_tool_specs, get_tool
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 

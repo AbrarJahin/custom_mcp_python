@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 import jwt
 from fastapi import HTTPException, status
 
-from .config import Settings
+from mcp_tool_gateway.config import Settings
 
 
 def api_key_is_allowed(api_key: str, settings: Settings) -> bool:

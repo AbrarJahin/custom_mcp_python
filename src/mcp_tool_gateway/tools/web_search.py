@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .base import BaseTool, ToolSpec, tool_decorator
-from .registry import register_tool
-from ..services.web_service import web_search_ddg
+from mcp_tool_gateway.tools._base import BaseTool, ToolSpec, tool_decorator
+from mcp_tool_gateway.services.web_service import web_search_ddg
 
 
 class WebSearchTool(BaseTool):
@@ -28,8 +27,3 @@ class WebSearchTool(BaseTool):
                 List of dict results with: rank, title, url, snippet.
             """
             return await web_search_ddg(query=query, max_results=max_results)
-
-
-_tool = WebSearchTool()
-register_tool(_tool)
-_tool.register()

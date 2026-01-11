@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import httpx
 from duckduckgo_async_search import top_n_result
 
-from ..config import settings
+from mcp_tool_gateway.config import settings
 
 
 def _url_allowed(url: str) -> bool:

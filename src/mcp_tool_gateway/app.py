@@ -1,14 +1,15 @@
 from __future__ import annotations
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .config import get_settings
-from .security import require_scopes, verify_jwt_from_header
-from .server import mcp
+from mcp_tool_gateway.config import get_settings
+from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
+from mcp_tool_gateway.server import mcp
 
-from .routes.auth import router as auth_router
-from .routes.tools import router as tools_router
+from mcp_tool_gateway.routes.auth import router as auth_router
+from mcp_tool_gateway.routes.tools import router as tools_router
 
 
 def create_app() -> FastAPI:
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
             "app_name": settings.app_name,
             "mcp_mount_path": settings.mcp_mount_path,
             "auth_enabled": settings.mcp_enable_auth,
+            "time": datetime.now(timezone.utc).isoformat()
         }
 
     # Register auth endpoint (it will error if auth is disabled, which is fine)
