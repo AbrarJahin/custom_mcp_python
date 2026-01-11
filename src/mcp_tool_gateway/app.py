@@ -1,11 +1,10 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from mcp_tool_gateway.config import get_settings
-from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
 from mcp_tool_gateway.server import mcp
 
 from mcp_tool_gateway.routes.auth import router as auth_router
@@ -32,14 +31,6 @@ def create_app() -> FastAPI:
     # Register auth endpoint (it will error if auth is disabled, which is fine)
     app.include_router(auth_router)
     app.include_router(tools_router)
-
-    # # Middleware-like gate for MCP routes when auth is enabled.
-    # @app.middleware("http")
-    # async def mcp_auth_gate(request: Request, call_next):
-    #     if settings.mcp_enable_auth and request.url.path.startswith(settings.mcp_mount_path):
-    #         claims = verify_jwt_from_header(authorization=request.headers.get("authorization"), settings=settings)
-    #         require_scopes(claims=claims, settings=settings)
-    #     return await call_next(request)
 
     # Streaming-safe auth gate for MCP routes
     if settings.mcp_enable_auth:

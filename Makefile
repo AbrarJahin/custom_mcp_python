@@ -42,6 +42,7 @@ help:
 	@echo   make lint         - Ruff lint (expects ruff in environment.yaml)
 	@echo   make format       - Ruff format (expects ruff in environment.yaml)
 	@echo   make clean        - Remove build/test caches (cross-platform)
+	@echo   make test         - Run all tests (ensure server is running first with `make run`)
 	@echo ------------------------------------------------------------
 
 # -----------------------------
@@ -71,7 +72,7 @@ status:
 # Run server
 # -----------------------------
 run:
-	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT)
+	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --log-level debug
 
 dev:
 	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --reload --log-level debug
