@@ -68,14 +68,14 @@ def create_app() -> FastAPI:
     app.include_router(tools_router)
 
     # Security middleware (no-op when auth disabled)
-    app.add_middleware(McpAuthGateMiddleware)
+    app.add_middleware(McpAuthGateMiddleware, settings=settings)
 
     # Mount MCP transport
-    app.mount(settings.mcp_mount_path, mcp_app)
+    app.mount(settings.MCP_MOUNT_PATH, mcp.sse_app())
 
     # Compatibility alias for /mcp if user changes mount path
     if settings.mcp_mount_path != "/mcp":
-        app.mount("/mcp", mcp_app)
+        
 
     # Compatibility: forward /messages to /mcp/messages (some clients assume root)
     @app.api_route("/messages", methods=["POST"])
