@@ -4,20 +4,19 @@ from typing import Any, Callable
 
 import logging
 
-from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
+from mcp_tool_gateway.security.jwt import require_scopes, verify_jwt_from_header
 
-logger = logging.getLogger("mcp_tool_gateway.middleware")
+logger = logging.getLogger("mcp_tool_gateway.security.middleware")
 
 
 class McpAuthGateMiddleware:
-    """
-    Streaming-safe ASGI middleware.
+    """Streaming-safe ASGI middleware.
 
     Why: FastAPI/Starlette's BaseHTTPMiddleware (used by @app.middleware("http"))
     is not safe for SSE/streaming responses and can break MCP initialization.
 
     Behavior:
-    - If settings.mcp_enable_auth is False: no auth checks (same as your current env toggle).
+    - If settings.mcp_enable_auth is False: no auth checks.
     - If True: requests under settings.mcp_mount_path require Authorization: Bearer <jwt>
       and scope validation.
     """
@@ -33,17 +32,16 @@ class McpAuthGateMiddleware:
             return
 
         path = scope.get("path", "") or ""
-        if scope.get("type") == "http":
-            logger.debug(
-                "McpAuthGateMiddleware: path=%s auth_enabled=%s mount=%s",
-                path,
-                self.settings.mcp_enable_auth,
-                self.settings.mcp_mount_path,
-            )
+
+        logger.debug(
+            "McpAuthGateMiddleware: path=%s auth_enabled=%s mount=%s",
+            path,
+            self.settings.mcp_enable_auth,
+            self.settings.mcp_mount_path,
+        )
 
         # Enforce auth only if enabled AND request is under MCP mount path
         if self.settings.mcp_enable_auth and path.startswith(self.settings.mcp_mount_path):
-            logger.debug("Auth enforced for path=%s", path)
             # ASGI headers are List[Tuple[bytes, bytes]]
             headers = dict(scope.get("headers") or [])
             auth_bytes = headers.get(b"authorization", b"")

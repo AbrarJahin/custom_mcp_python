@@ -13,11 +13,12 @@ from starlette.responses import Response
 from mcp_tool_gateway.config import get_settings
 from mcp_tool_gateway.server import mcp
 from mcp_tool_gateway.lifespan import startup_subapp, shutdown_subapp
+from mcp_tool_gateway.tools import register_all_tools
 
 from mcp_tool_gateway.routes.auth import router as auth_router
 from mcp_tool_gateway.routes.tools import router as tools_router
 
-from mcp_tool_gateway.middleware import McpAuthGateMiddleware
+from mcp_tool_gateway.security.middleware import McpAuthGateMiddleware
 from mcp_tool_gateway.security import require_scopes, verify_jwt_from_header
 
 logger = logging.getLogger("mcp_tool_gateway.app")
@@ -26,9 +27,18 @@ logger = logging.getLogger("mcp_tool_gateway.app")
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    # Ensure tools are registered before any transport apps are created.
+    # This is idempotent (safe to call more than once).
+    register_all_tools()
+
     # Build MCP SSE sub-application once per process.
-    # NOTE: Mounted apps may not have their lifespan invoked automatically by the parent.
-    mcp_app = mcp.sse_app()
+    # When mounting under a subpath, newer SDK versions recommend passing the
+    # mount path so the initial `endpoint` event contains the correct POST URL.
+    try:
+        mcp_app = mcp.sse_app(settings.mcp_mount_path)
+    except TypeError:
+        # Older SDK versions don't accept a mount path argument.
+        mcp_app = mcp.sse_app()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -40,10 +50,27 @@ def create_app() -> FastAPI:
             settings.mcp_mount_path,
             settings.mcp_enable_auth,
         )
-        # Forward startup to mounted MCP app (required for some FastMCP versions).
+        # IMPORTANT:
+        # FastMCP's HTTP/SSE transports rely on the session manager being started.
+        # When embedding (mounting) into FastAPI, you must run that lifespan.
+        # (See MCP Python SDK docs: use `mcp.session_manager.run()` in your app lifespan.)
+        session_manager = getattr(mcp, "session_manager", None)
+        sm_cm = None
+        if session_manager is not None and hasattr(session_manager, "run"):
+            try:
+                sm_cm = session_manager.run()
+            except Exception:
+                sm_cm = None
+
+        # Forward startup to mounted MCP app (fallback for older versions).
         await startup_subapp(mcp_app, name="mcp_sse_app")
+
         try:
-            yield
+            if sm_cm is not None and hasattr(sm_cm, "__aenter__"):
+                async with sm_cm:
+                    yield
+            else:
+                yield
         finally:
             await shutdown_subapp(mcp_app, name="mcp_sse_app")
             logger.debug("Gateway lifespan stop")
