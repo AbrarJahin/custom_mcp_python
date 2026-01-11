@@ -1,4 +1,4 @@
-.PHONY: help install update status run dev test-client lint format clean test
+.PHONY: help install update status run dev dev-run test-client lint format clean test
 
 # -----------------------------
 # Config
@@ -42,6 +42,7 @@ help:
 	@echo   make status       - Show python/pip versions inside env
 	@echo   make run          - Run MCP server (uvicorn) on $(HOST):$(PORT)
 	@echo   make dev          - Run MCP server with auto-reload on $(HOST):$(PORT)
+	@echo   make dev-run      - Run MCP server with debug logging on log file
 	@echo   make test-client  - Run local MCP client against $(MCP_SERVER_URL)
 	@echo   make lint         - Ruff lint (expects ruff in environment.yaml)
 	@echo   make format       - Ruff format (expects ruff in environment.yaml)
@@ -80,6 +81,10 @@ run:
 
 dev:
 	@$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --reload --log-level debug
+
+dev-run:
+	@if not exist "logs" mkdir "logs"
+	@powershell -NoProfile -Command "$(RUN) python -u -m uvicorn mcp_tool_gateway.app:app --host $(HOST) --port $(PORT) --log-level debug *> logs/run.log"
 
 test-client:
 	@$(RUN) python scripts/test_client.py
